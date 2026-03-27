@@ -1,0 +1,157 @@
+# =============================================================================
+# example_ru_stop.yaml — Example config for training a Russian "Стоп" wake word
+#
+# Short command words are harder to detect reliably than longer words because
+# there is less acoustic signal to work with.  To compensate:
+#   - Higher max_neg_weight (conservative — fewer false positives)
+#   - Large negative phrase list covering similar-sounding short words
+#   - Slightly more training samples for better generalisation
+#
+# Usage:
+#   ./run_training.sh --config example_ru_stop.yaml
+#   ./run_training.sh --config example_ru_stop.yaml --preview 10
+# =============================================================================
+
+model_name: ru_stop
+
+target_phrases:
+  - Стоп
+  - Стоп!
+  - Стоп.
+
+training:
+  n_samples: 60000
+  n_samples_val: 12000
+  steps: 600000
+  # Higher penalty for short words — they have more confusables
+  max_neg_weight: 5000
+  layer_size: 128
+
+voices:
+  primary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU
+    models:
+      ru_RU-dmitri-medium: dmitri/medium
+      ru_RU-denis-medium: denis/medium
+      ru_RU-irina-medium: irina/medium
+      ru_RU-ruslan-medium: ruslan/medium
+
+  secondary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main
+    models:
+      en_US-amy-medium: en/en_US/amy/medium
+      en_US-john-medium: en/en_US/john/medium
+      en_GB-alan-medium: en/en_GB/alan/medium
+
+negative_phrases:
+  # --- Partial matches / substrings ---
+  - Сто
+  - Топ
+  - Стой
+  - Стоя
+
+  # --- "Ст-" onset words ---
+  - Стол
+  - Стон
+  - Стук
+  - Стул
+  - Стая
+  - Стих
+  - Стиль
+  - Стена
+  - Степь
+  - Старт
+  - Ствол
+  - Стакан
+  - Статья
+  - Страна
+  - Строй
+  - Студент
+  - Ступень
+
+  # --- "-оп" / rhymes ---
+  - Хлоп
+  - Шоп
+  - Поп
+  - Коп
+  - Укроп
+  - Потоп
+  - Галоп
+  - Циклоп
+  - Сироп
+
+  # --- Similar short commands ---
+  - Пуск
+  - Хоп
+  - Гоп
+  - Шаг
+  - Пас
+  - Бам
+  - Бум
+
+  # --- Common household speech ---
+  - Привет
+  - Окей
+  - Хватит
+  - Начни
+  - Открой
+  - Закрой
+  - Вперёд
+  - Назад
+  - Помоги
+  - Хорошо
+  - Понял
+  - Давай
+  - Ладно
+  - Нет
+  - Да
+
+  # --- Russian voice assistant names ---
+  - Алиса
+  - Маруся
+  - Салют
+  - Компьютер
+
+  # --- Short greetings ---
+  - Добрый день
+  - Доброе утро
+  - Добрый вечер
+
+  # --- Names ---
+  - Степан
+  - Стас
+  - Настя
+
+  # --- Voice commands ---
+  - Выключи
+  - Включи
+  - Громче
+  - Тише
+  - Пауза
+  - Играй
+
+  # --- English confusables (secondary voices) ---
+  - Stop
+  - Stomp
+  - Stoke
+  - Stock
+  - Stone
+  - Store
+  - Storm
+  - Story
+  - Stall
+  - Stuck
+  - Top
+  - Drop
+  - Chop
+  - Shop
+  - Crop
+  - Swap
+  - Flop
+
+russian_speech_negatives:
+  enabled: true
+  dataset: bond005/sberdevices_golos_10h_crowd
+  split: train
+  max_chunks: 5000
+  batch_n: 200

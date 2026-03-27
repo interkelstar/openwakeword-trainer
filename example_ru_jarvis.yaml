@@ -1,0 +1,203 @@
+# =============================================================================
+# example_ru_jarvis.yaml — Example config for training a Russian "Джарвис" wake word
+#
+# This is a template. Copy it, rename it, and modify it for your own wake word.
+#
+# Usage:
+#   ./run_training.sh --config example_ru_jarvis.yaml
+#   ./run_training.sh --config example_ru_jarvis.yaml --phase train
+#   ./run_training.sh --config example_ru_jarvis.yaml --preview 5
+# =============================================================================
+
+# Name used for all output files:
+#   training/output/<model_name>/     — working directory
+#   <model_name>.onnx                 — trained model (ONNX)
+#   <model_name>.tflite               — TFLite model (after export phase)
+# Keep it short, lowercase, ASCII-safe (no spaces or special characters).
+model_name: ru_jarvis
+
+# Human-readable wake word label (may contain Unicode).
+wake_word: "Джарвис"
+
+# Your name or handle — included in metadata only, not used for training.
+author: yourname
+
+# BCP-47 language code(s) this model was trained for.
+# Used for metadata only.
+trained_languages: ["ru"]
+
+# Increment this when you retrain with improved data.
+version: 1
+
+# ---------------------------------------------------------------------------
+# Target phrases
+#
+# The exact text the TTS engine will speak to create positive training examples.
+# Adding punctuation variants (!, ?) produces different TTS intonation:
+#   "Джарвис"  → neutral
+#   "Джарвис!" → emphatic
+#   "Джарвис?" → rising (question)
+# This diversity improves recall across natural speech patterns.
+# ---------------------------------------------------------------------------
+target_phrases:
+  - Джарвис
+  - Джарвис!
+  - Джарвис?
+
+# ---------------------------------------------------------------------------
+# Training parameters
+# ---------------------------------------------------------------------------
+training:
+  # Number of TTS clips to generate for training / validation.
+  # More clips = better generalisation, but longer generation time (~0.2s/clip).
+  # 50k is a solid default; 25k is minimum viable; 100k+ for production use.
+  n_samples: 50000
+  n_samples_val: 10000
+
+  # Total gradient steps. 500k is a good starting point.
+  # Increase to 750k–1M if the model underfits (low recall).
+  # Raise max_neg_weight instead if the model overfits (too many false positives).
+  steps: 500000
+
+  # Hidden layer width (neurons per layer).
+  # openWakeWord default is 128. Range 64–192 is practical.
+  # Larger = more capacity, slightly higher CPU cost at inference time.
+  layer_size: 128
+
+  # False positive penalty (max_negative_weight in openWakeWord).
+  # Higher = more conservative model (fewer false positives, potentially lower recall).
+  # Start at 3000; raise to 5000–10000 if you get too many false activations.
+  max_neg_weight: 3000
+
+# ---------------------------------------------------------------------------
+# Piper ONNX voice models
+#
+# The training pipeline downloads Piper voices from HuggingFace and uses the
+# standalone piper binary for TTS synthesis (no Python TTS library needed).
+#
+# Each entry maps a model filename (without .onnx) to its path under base_url.
+# Browse available voices: https://huggingface.co/rhasspy/piper-voices
+# Use "medium" quality for good TTS at reasonable synthesis speed.
+# More voices = more speaker diversity = better model generalisation.
+# ---------------------------------------------------------------------------
+voices:
+  # Primary voices — used for positive clips AND same-language negative synthesis.
+  # Must match the language of target_phrases.
+  primary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU
+    models:
+      # filename (without .onnx): path suffix under base_url
+      ru_RU-dmitri-medium: dmitri/medium
+      ru_RU-denis-medium: denis/medium
+      ru_RU-irina-medium: irina/medium
+      ru_RU-ruslan-medium: ruslan/medium
+
+  # Secondary voices (optional) — used ONLY for cross-language negative phrases.
+  # For example, English words that sound similar to the Russian wake word.
+  # Remove this section if you don't need cross-language negatives.
+  secondary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main
+    models:
+      en_US-amy-medium: en/en_US/amy/medium
+      en_US-john-medium: en/en_US/john/medium
+      en_GB-alan-medium: en/en_GB/alan/medium
+
+# ---------------------------------------------------------------------------
+# Adversarial negative phrases
+#
+# These are synthesised as negative training examples.  The model learns to
+# distinguish the wake word from these confusable words, which dramatically
+# reduces false activations.
+#
+# Tips for building a good negative list:
+#   - Include partial matches (first/last syllable of the wake word)
+#   - Include rhymes and words with the same onset consonant cluster
+#   - Include common household words, greetings, and voice commands
+#   - Include other voice assistant names (Алиса, etc.)
+#   - Include Latin-script words that sound similar (synthesised with secondary voices)
+#   - 50–100 phrases is a good range; more is fine
+# ---------------------------------------------------------------------------
+negative_phrases:
+  # Partial and near-matches
+  - Джар
+  - Ярвис
+  - Джарв
+  - Вис
+  # Same onset, different body
+  - Джек
+  - Джон
+  - Джим
+  - Джаз
+  - Джамал
+  # "Дж" onset words (common on TV/YouTube)
+  - Джунгли
+  - Джентльмен
+  - Джинсы
+  - Джип
+  - Джокер
+  # Similar endings / rhymes
+  - Харвис
+  - Гарвис
+  - Сервис
+  # "жа/жар" consonant cluster
+  - Жарко
+  - Жаль
+  - Пожалуйста
+  - Пожар
+  # Similar-sounding proper nouns
+  - Маркус
+  - Артемис
+  - Алексис
+  # Other voice assistant names
+  - Алиса
+  - Маруся
+  - Салют
+  - Компьютер
+  # Common one-word commands (false-activation sources)
+  - Привет
+  - Окей
+  - Стоп
+  - Хватит
+  - Начни
+  - Открой
+  - Помоги
+  - Хорошо
+  # Names starting with Д
+  - Дмитрий
+  - Дарья
+  - Денис
+  # Short greetings
+  - Добрый день
+  - Доброе утро
+  - Добрый вечер
+  # English words (TV/YouTube sources — synthesised with secondary voices)
+  - Jarring
+  - Charges
+  - Jargon
+  - Jungle
+  - Jingle
+  - Charles
+  - Largest
+  - Dangerous
+
+# ---------------------------------------------------------------------------
+# Russian speech negatives (optional)
+#
+# Downloads a real Russian speech dataset and extracts openWakeWord embeddings
+# as a dedicated "russian_speech" negative class.  This teaches the model to
+# reject general Russian conversation, not just the adversarial phrases above.
+#
+# Requires ~30 MB disk space for the feature file.
+# The dataset download streams from HuggingFace (no bulk download needed).
+# ---------------------------------------------------------------------------
+russian_speech_negatives:
+  enabled: true
+  # HuggingFace dataset ID (must have an "audio" column)
+  dataset: bond005/sberdevices_golos_10h_crowd
+  split: train
+  # Number of 2-second audio chunks to extract features from.
+  # 5000 chunks ≈ 2.8 hours of speech, producing ~30 MB .npy file.
+  max_chunks: 5000
+  # Samples per batch from this class during training.
+  # Keep smaller than ACAV100M (1024) to avoid overwhelming other negatives.
+  batch_n: 200

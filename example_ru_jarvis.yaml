@@ -183,14 +183,15 @@ negative_phrases:
 # ---------------------------------------------------------------------------
 # Russian speech negatives (optional)
 #
-# Downloads a real Russian speech dataset and extracts openWakeWord embeddings
-# as a dedicated "russian_speech" negative class.  This teaches the model to
-# reject general Russian conversation, not just the adversarial phrases above.
+# Downloads a real speech dataset in your target language and extracts
+# openWakeWord embeddings as a dedicated negative class.  This teaches the
+# model to reject general conversation, not just the adversarial phrases
+# above.  Swap the dataset for any HuggingFace audio dataset in your language.
 #
 # Requires ~30 MB disk space for the feature file.
 # The dataset download streams from HuggingFace (no bulk download needed).
 # ---------------------------------------------------------------------------
-russian_speech_negatives:
+speech_negatives:
   enabled: true
   # HuggingFace dataset ID (must have an "audio" column)
   dataset: bond005/sberdevices_golos_10h_crowd

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Generate high-quality Russian wake word clips using ElevenLabs multilingual v2.
+Generate high-quality wake word clips using ElevenLabs multilingual v2.
+Works for any language supported by eleven_multilingual_v2 — the phrases
+come from your YAML config.
 
 Outputs WAV files (16kHz mono int16) into training/output/<model_name>/elevenlabs_positive/
-These get mixed into positive training data during feature extraction.
+The trainer does not pick these up automatically — copy them into
+training/output/<model_name>/positive_train/ before running --phase augment.
 
 Usage:
-    .venv/bin/python generate_elevenlabs.py --api-key <KEY> --config ru_jarvis.yaml
+    .venv/bin/python generate_elevenlabs.py --api-key <KEY> --config my_wakeword.yaml
 """
 
 import argparse
@@ -102,7 +105,7 @@ def generate_clip(api_key: str, voice_id: str, text: str,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api-key", required=True)
-    parser.add_argument("--config", default="ru_jarvis.yaml")
+    parser.add_argument("--config", required=True)
     parser.add_argument("--max-clips", type=int, default=1200,
                         help="Maximum clips to generate (default: 1200)")
     parser.add_argument("--output-dir", default=None,

@@ -13,7 +13,7 @@ Phases (run in order):
     voices     Download Piper ONNX voice models from HuggingFace
     features   Download ACAV100M + validation feature files (~7 GB total)
     background Download MIT RIRs, AudioSet, and FMA background audio (~5 GB)
-    ru_speech  Extract Russian speech features as a dedicated negative class
+    speech     Extract real speech features as a dedicated negative class
     generate   Generate TTS clips via openWakeWord train.py --generate_clips
     augment    Augment clips with room impulse responses + background noise
     train      Train the DNN via openWakeWord train.py --train_model
@@ -102,7 +102,9 @@ def load_config(config_path: str) -> dict:
     }
 
     # Russian speech negatives (optional — requires HuggingFace dataset)
-    ru_neg = raw.get("russian_speech_negatives", {})
+    # "speech_negatives" is the canonical key; "russian_speech_negatives" is
+    # accepted for backward compatibility with older configs.
+    ru_neg = raw.get("speech_negatives", raw.get("russian_speech_negatives", {}))
     cfg["ru_speech_enabled"]    = ru_neg.get("enabled", False)
     cfg["ru_speech_dataset"]    = ru_neg.get("dataset", "bond005/sberdevices_golos_10h_crowd")
     cfg["ru_speech_split"]      = ru_neg.get("split", "train")
@@ -675,14 +677,14 @@ def phase_ru_speech():
 
     Creates training/ru_speech/ru_speech_features.npy — a dedicated negative
     class that teaches the model to reject general Russian conversation.
-    Only runs if russian_speech_negatives.enabled is true in the config.
+    Only runs if speech_negatives.enabled is true in the config.
     """
     log.info("=" * 60)
     log.info("Phase: ru_speech — Russian speech negative features")
     log.info("=" * 60)
 
     if not RU_SPEECH_ENABLED:
-        log.info("  russian_speech_negatives.enabled is false — skipping")
+        log.info("  speech_negatives.enabled is false — skipping")
         return
 
     ru_npy = RU_SPEECH_DIR / "ru_speech_features.npy"
@@ -845,9 +847,9 @@ def _is_latin(text: str) -> bool:
 def _generate_secondary_negatives():
     """Synthesise secondary-language negative phrases with secondary voice models.
 
-    Detects which negative phrases use Latin script and synthesises them with
-    the secondary voice set. Generates ~2000 clips split 80/20 into
-    negative_train / negative_test.
+    Detects which negative phrases use a different script than the target
+    phrases and synthesises them with the secondary voice set. Generates
+    ~2000 clips split 80/20 into negative_train / negative_test.
 
     This helps the model reject speech from non-primary languages (e.g. English
     words on TV/YouTube that sound similar to a Russian wake word).
@@ -861,7 +863,8 @@ def _generate_secondary_negatives():
         log.info("  No secondary voices configured — skipping secondary negatives")
         return
 
-    sec_phrases = [p for p in NEGATIVE_PHRASES if _is_latin(p)]
+    primary_latin = _is_latin(" ".join(TARGET_PHRASES))
+    sec_phrases = [p for p in NEGATIVE_PHRASES if _is_latin(p) != primary_latin]
     if not sec_phrases:
         log.info("  No secondary-script phrases in negative_phrases — skipping")
         return
@@ -1280,7 +1283,7 @@ def _run_preview(n: int):
 # MAIN
 # ===========================================================================
 
-ALL_PHASES = ["setup", "voices", "features", "background", "ru_speech",
+ALL_PHASES = ["setup", "voices", "features", "background", "speech",
               "generate", "augment", "train", "export"]
 
 
@@ -1294,7 +1297,7 @@ def main():
               voices       Download Piper ONNX voice models
               features     Download ACAV100M + validation .npy files (~7 GB)
               background   Download MIT RIRs, AudioSet, FMA background audio
-              ru_speech    Extract Russian speech features as a negative class
+              speech       Extract real speech features as a negative class
               generate     TTS clip generation via openWakeWord train.py
               augment      Noise + RIR augmentation via openWakeWord train.py
               train        DNN training (outputs training/output/<name>.onnx)
@@ -1318,7 +1321,7 @@ def main():
     )
     parser.add_argument(
         "--phase",
-        choices=["all"] + ALL_PHASES,
+        choices=["all"] + ALL_PHASES + ["ru_speech"],  # ru_speech = legacy alias
         default="all",
         help="Which phase to run (default: all)",
     )
@@ -1333,6 +1336,8 @@ def main():
              "Use this to verify TTS pronunciation before starting full training.",
     )
     args = parser.parse_args()
+    if args.phase == "ru_speech":
+        args.phase = "speech"
 
     cfg = load_config(args.config)
     _apply_config(cfg)
@@ -1371,7 +1376,7 @@ def main():
     if run_all or args.phase == "background":
         phase_background()
 
-    if args.phase == "ru_speech":
+    if args.phase == "speech":
         phase_ru_speech()
     elif run_all:
         phase_ru_speech()

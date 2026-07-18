@@ -149,7 +149,7 @@ negative_phrases:
   - Swap
   - Flop
 
-russian_speech_negatives:
+speech_negatives:
   enabled: true
   dataset: bond005/sberdevices_golos_10h_crowd
   split: train

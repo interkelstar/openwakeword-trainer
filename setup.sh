@@ -116,7 +116,7 @@ if command -v nvidia-smi &>/dev/null; then
     CUDA_MAJOR=$(nvidia-smi | grep -oP 'CUDA Version: \K[0-9]+' | head -1 || echo "0")
     info "  Driver max CUDA version: $CUDA_MAJOR.x"
 
-    # Map to best available PyTorch wheel (cu126 is latest stable as of early 2026)
+    # Map to best available PyTorch wheel
     if   [[ $CUDA_MAJOR -ge 12 ]]; then
         TORCH_TAG="cu126"
     elif [[ $CUDA_MAJOR -ge 11 ]]; then

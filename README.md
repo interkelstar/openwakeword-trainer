@@ -1,5 +1,11 @@
 # openWakeWord Trainer
 
+> **Status:** feature-complete, in maintenance mode. This trainer works and
+> is self-contained, but for my own wake word I moved to the
+> [microWakeWord trainer](https://github.com/interkelstar/microwakeword-trainer)
+> — its streaming CNN gave much better real-world recall (see the honest
+> results comparison below).
+
 Config-driven pipeline for training custom wake word models using the
 [openWakeWord](https://github.com/dscripka/openWakeWord) framework.
 
@@ -57,6 +63,12 @@ much stronger real-world results.
 - ~26 GB disk space for training data
 - NVIDIA GPU optional but cuts training time from ~10 hours to ~2 hours
 
+> **Reproducibility note:** `setup.sh` clones openWakeWord and
+> piper-sample-generator at their current HEAD and applies a set of small
+> compatibility patches (each guarded by a content check, so an upstream
+> change makes the patch a no-op rather than corrupting files). If a fresh
+> setup breaks after an upstream change, please open an issue.
+
 ## Quick Start
 
 ```bash
@@ -91,7 +103,7 @@ The pipeline runs these phases in order:
 | `voices`     | Download Piper ONNX voice models from HuggingFace              | 1–5 min     |
 | `features`   | Download ACAV100M + validation feature files (~7 GB)           | 30–60 min   |
 | `background` | Download MIT RIRs + AudioSet + FMA background audio (~5 GB)    | 30–60 min   |
-| `ru_speech`  | Extract real speech features as a dedicated negative class     | 10–30 min   |
+| `speech`     | Extract real speech features as a dedicated negative class     | 10–30 min   |
 | `generate`   | Generate TTS clips via piper binary                            | 6–10 hours  |
 | `augment`    | Augment clips with room impulse responses + background noise   | 2–4 hours   |
 | `train`      | Train the DNN model                                            | 1–12 hours  |
@@ -144,7 +156,7 @@ negative_phrases:              # Acoustically similar words the model should rej
   - Алиса
   - Jarring                    # Latin script → synthesised with secondary voices
 
-russian_speech_negatives:
+speech_negatives:
   enabled: true                # Include real speech as a negative class
   dataset: bond005/sberdevices_golos_10h_crowd
   max_chunks: 5000
@@ -162,9 +174,9 @@ to reject them. This dramatically reduces false activations in real use.
   language.
 - **Real speech negatives**: speech embeddings from a HuggingFace dataset.
   Teaches the model to reject general conversation, not just the specific
-  adversarial phrases. The `ru_speech` phase uses
-  `bond005/sberdevices_golos_10h_crowd` by default; swap in any audio dataset
-  in the config.
+  adversarial phrases. The `speech` phase uses
+  `bond005/sberdevices_golos_10h_crowd` (Russian) by default; swap in any
+  audio dataset in your target language in the config.
 
 ### Choosing voices
 
@@ -192,7 +204,7 @@ voices:
   increase this (3000 → 5000). If you miss too many real activations, lower it.
 - **Diverse voices help**: each additional primary voice adds a new acoustic
   profile for the same word. 3–4 voices is a good starting point.
-- **Real speech negatives** (the `ru_speech` phase) are particularly effective
+- **Real speech negatives** (the `speech` phase) are particularly effective
   for languages where TTS-only training leads to confusions with natural
   speech patterns.
 
@@ -200,8 +212,10 @@ voices:
 
 After the `export` phase completes:
 
-- `<model_name>.tflite` — the trained model (~860 KB)
-- `<model_name>.onnx` — the ONNX model (intermediate artifact)
+- `<model_name>.tflite` — the trained model (~860 KB), copied to the project
+  root
+- `<model_name>.onnx` — copied to the project root only if the TFLite
+  conversion fails; otherwise it stays in `training/output/`
 
 The ONNX model is usable directly with openWakeWord without the TFLite step.
 See [openWakeWord usage docs](https://github.com/dscripka/openWakeWord#usage).
@@ -209,15 +223,18 @@ See [openWakeWord usage docs](https://github.com/dscripka/openWakeWord#usage).
 ## ElevenLabs High-Quality Positives (Optional)
 
 `generate_elevenlabs.py` generates additional high-quality TTS clips using the
-ElevenLabs API (requires an API key with credits). These are mixed into the
-positive training set and can improve naturalness of the trained model:
+ElevenLabs API (requires an API key with credits). Adding them to the positive
+training set can improve naturalness of the trained model:
 
 ```bash
 .venv/bin/python generate_elevenlabs.py --api-key YOUR_KEY --config my_wakeword.yaml
-```
 
-Clips are saved to `training/output/<model_name>/elevenlabs_positive/` and
-will be automatically picked up the next time you run `--phase augment`.
+# The trainer does not pick these up automatically — copy them into the
+# positive set, then re-run augmentation:
+cp training/output/<model_name>/elevenlabs_positive/*.wav \
+   training/output/<model_name>/positive_train/
+./run_training.sh --config my_wakeword.yaml --phase augment
+```
 
 ## Disk Space
 

@@ -1,0 +1,84 @@
+model_name: ru_lance
+wake_word: "Лэнс"
+author: egerevandrey1-rgb
+trained_languages: ["ru"]
+version: 1
+
+target_phrases:
+  - Лэнс
+  - Лэнс!
+  - Лэнс?
+
+training:
+  n_samples: 50000
+  n_samples_val: 10000
+  steps: 500000
+  layer_size: 128
+  max_neg_weight: 3000
+
+voices:
+  primary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU
+    models:
+      ru_RU-dmitri-medium: dmitri/medium
+      ru_RU-denis-medium: denis/medium
+      ru_RU-irina-medium: irina/medium
+      ru_RU-ruslan-medium: ruslan/medium
+
+  secondary:
+    base_url: https://huggingface.co/rhasspy/piper-voices/resolve/main
+    models:
+      en_US-amy-medium: en/en_US/amy/medium
+      en_US-john-medium: en/en_US/john/medium
+      en_GB-alan-medium: en/en_GB/alan/medium
+
+negative_phrases:
+  - Ленс
+  - Ланс
+  - Ленс
+  - Лэн
+  - Лен
+  - Лень
+  - Лена
+  - Леня
+  - Лёня
+  - Линс
+  - Линз
+  - Ленц
+  - Ланс
+  - Лин
+  - Лев
+  - Лёш
+  - Лёша
+  - Лена
+  - Алиса
+  - Маруся
+  - Салют
+  - Компьютер
+  - Привет
+  - Окей
+  - Стоп
+  - Хватит
+  - Начни
+  - Открой
+  - Помоги
+  - Хорошо
+  - Добрый день
+  - Доброе утро
+  - Добрый вечер
+  - Lance
+  - Lens
+  - Lanes
+  - Lands
+  - Jarring
+  - Charges
+  - Jargon
+  - Jungle
+  - Jingle
+
+speech_negatives:
+  enabled: true
+  dataset: bond005/sberdevices_golos_10h_crowd
+  split: train
+  max_chunks: 5000
+  batch_n: 200
